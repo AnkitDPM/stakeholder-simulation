@@ -6,23 +6,33 @@ import plotly.express as px
 st.set_page_config(page_title="Stakeholder Simulation", layout="wide")
 
 phases = ['Initiation', 'Planning', 'Execution', 'Closure']
-roles_behaviors = {
-    "Client": {
-        "phases": ['Initiation', 'Planning', 'Closure'],
-        "behaviors": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"]
-    },
-    "Project Manager": {
-        "phases": ['Initiation', 'Planning', 'Execution', 'Closure'],
-        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"]
-    },
-    "Project Team": {
-        "phases": ['Planning', 'Execution', 'Closure'],
-        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
-    }
+roles = ["Client", "Project Manager", "Project Team"]
+traits = [
+    "Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep",
+    "Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms",
+    "ConflictResolution", "Miscommunication"
+]
+# For each trait, specify where it applies (role, phase)
+trait_applicability = {
+    "Ego": [("Client", "Initiation"), ("Client", "Planning"), ("Client", "Closure")],
+    "RiskAversion": [("Client", "Initiation"), ("Client", "Planning"), ("Client", "Closure")],
+    "StakeholderEngagement": [("Client", "Initiation"), ("Client", "Planning"), ("Client", "Closure")],
+    "Delays": [("Client", "Initiation"), ("Client", "Planning"), ("Client", "Closure"),
+               ("Project Team", "Planning"), ("Project Team", "Execution"), ("Project Team", "Closure")],
+    "ScopeCreep": [("Client", "Initiation"), ("Client", "Planning"), ("Client", "Closure")],
+    "Adaptability": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure"),
+                     ("Project Team", "Planning"), ("Project Team", "Execution"), ("Project Team", "Closure")],
+    "CollaborativePlanning": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure"),
+                              ("Project Team", "Planning"), ("Project Team", "Execution"), ("Project Team", "Closure")],
+    "ConstructiveFeedback": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure"),
+                             ("Project Team", "Planning"), ("Project Team", "Execution"), ("Project Team", "Closure")],
+    "ProactiveComms": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure")],
+    "ConflictResolution": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure")],
+    "Miscommunication": [("Project Manager", "Initiation"), ("Project Manager", "Planning"), ("Project Manager", "Execution"), ("Project Manager", "Closure"),
+                         ("Project Team", "Planning"), ("Project Team", "Execution"), ("Project Team", "Closure")]
 }
 ordinal_levels = ['Low', 'Medium', 'High']
 ordinal_map = {'Low': 1, 'Medium': 2, 'High': 3}
-
 behavior_weights = {
     "Ego": {"cost": 2, "duration": 1, "quality": -2},
     "RiskAversion": {"cost": 1, "duration": 2, "quality": -1},
@@ -37,28 +47,25 @@ behavior_weights = {
     "ConflictResolution": {"cost": -1, "duration": -1, "quality": 2},
 }
 
-st.title("🌈 Role-based Stakeholder Simulation")
+st.title("🌈 Stakeholder Simulation (by Trait)")
 
 st.sidebar.header("Simulation Settings")
 num_projects = st.sidebar.select_slider(
     "Number of Simulation Runs (multiples of 100)", options=[100,200,300,400,500,600,700,800,900,1000], value=300)
 st.sidebar.markdown("---")
 
-st.header("Configure Stakeholder Behaviors (by Phase)")
+st.header("Configure Stakeholder Traits (by Trait)")
 profiles = []
-for phase in phases:
-    with st.expander(f"{phase} Phase", expanded=True):
-        for role in roles_behaviors:
-            if phase in roles_behaviors[role]["phases"]:
-                st.subheader(f"{role}")
-                for behavior in roles_behaviors[role]["behaviors"]:
-                    val = st.selectbox(
-                        f"{phase} - {role} - {behavior}",
-                        ordinal_levels,
-                        key=f"{phase}-{role}-{behavior}",
-                        index=1
-                    )
-                    profiles.append({"Phase": phase, "Role": role, "Behavior": behavior, "Value": val})
+for trait in traits:
+    with st.expander(f"Trait: {trait}", expanded=False):
+        for (role, phase) in trait_applicability.get(trait, []):
+            val = st.selectbox(
+                f"{trait} for {role} in {phase}",
+                ordinal_levels,
+                key=f"{trait}-{role}-{phase}",
+                index=1
+            )
+            profiles.append({"Trait": trait, "Role": role, "Phase": phase, "Value": val})
 
 profiles_df = pd.DataFrame(profiles)
 
@@ -71,7 +78,7 @@ def simulate_projects(num_projects, profiles_df):
         quality = 50
         for _, row in profiles_df[profiles_df["Phase"] == phase].iterrows():
             level = ordinal_map[row["Value"]]
-            w = behavior_weights[row["Behavior"]]
+            w = behavior_weights[row["Trait"]]
             cost += w["cost"] * (level - 2)
             duration += w["duration"] * (level - 2)
             quality += w["quality"] * (level - 2)
@@ -113,10 +120,10 @@ if st.button("Run Simulation 🚀"):
 
     st.header("🔎 Insights from Simulation")
     st.markdown(f"""
-    - **High cost or duration**: If you observe many projects in the 'High' category, review which behaviors are set to 'High' for negative factors (e.g., Ego, Delays, ScopeCreep). Lowering these will improve outcomes.
-    - **High quality**: High levels of positive behaviors (e.g., Stakeholder Engagement, Collaborative Planning) lead to more 'High' quality projects.
-    - **Phase differences**: If certain phases show worse outcomes, focus improvement efforts on behaviors in those phases.
-    - **Tip**: Use this simulation to test how changing stakeholder behaviors impacts project KPIs.
+    - **Trait-centric analysis**: Easily see which traits (behaviors) have the biggest impact in each phase and for each stakeholder.
+    - **High cost/duration**: Traits like Ego, Delays, ScopeCreep, when set high for any stakeholder in any phase, will raise project risk.
+    - **High quality**: Traits like Stakeholder Engagement and Collaborative Planning, when set high, improve outcomes.
+    - **Action**: Use this to prioritize which traits to develop or mitigate for each stakeholder in each phase.
     """)
 else:
-    st.info("Configure behaviors above, then click 'Run Simulation 🚀' to see results.")
+    st.info("Configure traits above, then click 'Run Simulation 🚀' to see results.")
