@@ -48,11 +48,25 @@ behavior_weights = {
 }
 
 import streamlit as st
-from graphviz import Digraph
+import graphviz
 
-dot = Digraph("StakeholderPhases", format="png")
-dot.attr(rankdir="LR")
-dot.attr('node', shape='box', style='rounded')
+# Color palettes for clarity
+phase_colors = {
+    "Initiation": "#AED6F1",
+    "Planning": "#A9DFBF",
+    "Execution": "#F9E79F",
+    "Closure": "#F5B7B1"
+}
+role_colors = {
+    "Client": "#2E86C1",
+    "Project Manager": "#229954",
+    "Project Team": "#B9770E"
+}
+behavior_colors = {
+    "Ego": "#D35400", "RiskAversion": "#CA6F1E", "StakeholderEngagement": "#7D3C98", "Delays": "#A93226", "ScopeCreep": "#1F618D",
+    "Adaptability": "#117A65", "CollaborativePlanning": "#196F3D", "ConstructiveFeedback": "#7B241C", "ProactiveComms": "#2471A3",
+    "ConflictResolution": "#AF601A", "Miscommunication": "#616A6B"
+}
 
 phases = ['Initiation', 'Planning', 'Execution', 'Closure']
 roles_behaviors = {
@@ -71,19 +85,28 @@ roles_behaviors = {
 }
 phase_short = {"Initiation":"Init", "Planning":"Plan", "Execution":"Exec", "Closure":"Clos"}
 
+dot = graphviz.Digraph("StakeholderPhases", format="png")
+dot.attr(rankdir="LR", size="8,4")
+dot.attr('node', shape='box', style='rounded,filled', fontsize="10")
+
+# Add phase nodes
 for phase in phases:
-    dot.node(phase)
+    dot.node(phase, phase, fillcolor=phase_colors[phase], fontcolor="#154360")
+
+# Add role nodes per phase and connect
+for phase in phases:
     for role in roles_behaviors:
         if phase in roles_behaviors[role]["phases"]:
-            dot.node(role)
-            dot.edge(phase, role)
+            role_id = f"{role}_{phase}"
+            dot.node(role_id, role, fillcolor=role_colors[role], fontcolor="white")
+            dot.edge(phase, role_id, color=role_colors[role])
+            # Add behavior nodes for this role/phase
             for behavior in roles_behaviors[role]["behaviors"]:
-                # Only add behaviors relevant for this phase
-                if phase in roles_behaviors[role]["phases"]:
-                    beh_node = f"{behavior} ({phase_short[phase]})"
-                    dot.node(beh_node)
-                    dot.edge(role, beh_node)
+                beh_id = f"{behavior}_{role}_{phase}"
+                dot.node(beh_id, behavior, fillcolor=behavior_colors.get(behavior, "#ABB2B9"), fontcolor="white", fontsize="9")
+                dot.edge(role_id, beh_id, color=behavior_colors.get(behavior, "#ABB2B9"))
 
+st.subheader("📊 Compact, Colorful Phase–Stakeholder–Behavior Tree")
 st.graphviz_chart(dot)
 
 
