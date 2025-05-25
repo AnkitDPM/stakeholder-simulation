@@ -5,24 +5,28 @@ import plotly.express as px
 
 st.set_page_config(page_title="Scenario Analysis - Stakeholder Simulation", layout="wide")
 
-phases = ['Initiation', 'Planning', 'Execution', 'Closure']
-roles_behaviors = {
-    "Client": {
-        "phases": ['Initiation', 'Planning', 'Closure'],
-        "behaviors": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"]
+phase_structure = {
+    "Initiation": {
+        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
+        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"]
     },
-    "Project Manager": {
-        "phases": ['Initiation', 'Planning', 'Execution', 'Closure'],
-        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"]
+    "Planning": {
+        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
+        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
+        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
     },
-    "Project Team": {
-        "phases": ['Planning', 'Execution', 'Closure'],
-        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
+    "Execution": {
+        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
+        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
+    },
+    "Closure": {
+        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
+        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
+        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
     }
 }
 ordinal_levels = ['Low', 'Medium', 'High']
 ordinal_map = {'Low': 1, 'Medium': 2, 'High': 3}
-
 behavior_weights = {
     "Ego": {"cost": 2, "duration": 1, "quality": -2},
     "RiskAversion": {"cost": 1, "duration": 2, "quality": -1},
@@ -37,12 +41,11 @@ behavior_weights = {
     "ConflictResolution": {"cost": -1, "duration": -1, "quality": 2},
 }
 
-st.title("📊 Scenario Analysis - Stakeholder Simulation")
+st.title("📊 Scenario Analysis - Stakeholder Simulation (Realistic)")
 
 st.sidebar.header("Simulation Settings")
 num_projects = st.sidebar.select_slider(
     "Number of Simulation Runs", options=[100,200,300,400,500,600,700,800,900,1000], value=300)
-
 st.sidebar.markdown("---")
 scenario_names = st.sidebar.text_input("Scenario Names (comma separated)", value="Pessimistic,Base,Optimistic")
 scenario_list = [s.strip() for s in scenario_names.split(",") if s.strip()]
@@ -51,34 +54,35 @@ scenarios = {}
 for scenario in scenario_list:
     st.header(f"Configure: {scenario}")
     profiles = []
-    for role in roles_behaviors:
-        with st.expander(f"{role} ({scenario})", expanded=(scenario=="Base")):
-            for phase in roles_behaviors[role]["phases"]:
-                st.subheader(f"{role} - {phase} Phase")
-                for behavior in roles_behaviors[role]["behaviors"]:
+    for phase, stakeholders in phase_structure.items():
+        with st.expander(f"{phase} Phase ({scenario})", expanded=(scenario=="Base")):
+            for role, behaviors in stakeholders.items():
+                st.subheader(f"{role}")
+                for behavior in behaviors:
                     val = st.selectbox(
-                        f"{role} - {phase} - {behavior} ({scenario})",
+                        f"{phase} - {role} - {behavior} ({scenario})",
                         ordinal_levels,
-                        key=f"{scenario}-{role}-{phase}-{behavior}",
+                        key=f"{scenario}-{phase}-{role}-{behavior}",
                         index=1 if scenario=="Base" else 0
                     )
-                    profiles.append({"Role": role, "Phase": phase, "Behavior": behavior, "Value": val})
+                    profiles.append({"Phase": phase, "Role": role, "Behavior": behavior, "Value": val})
     scenarios[scenario] = pd.DataFrame(profiles)
 
 def simulate_projects(num_projects, profiles_df):
+    phases = list(phase_structure.keys())
     projects = []
     for _ in range(num_projects):
         phase = np.random.choice(phases)
         cost = 50
         duration = 50
         quality = 50
-        for _, row in profiles_df.iterrows():
-            if row["Phase"] == phase:
-                level = ordinal_map[row["Value"]]
-                w = behavior_weights[row["Behavior"]]
-                cost += w["cost"] * (level - 2)
-                duration += w["duration"] * (level - 2)
-                quality += w["quality"] * (level - 2)
+        relevant = profiles_df[profiles_df["Phase"] == phase]
+        for _, row in relevant.iterrows():
+            level = ordinal_map[row["Value"]]
+            w = behavior_weights[row["Behavior"]]
+            cost += w["cost"] * (level - 2)
+            duration += w["duration"] * (level - 2)
+            quality += w["quality"] * (level - 2)
         cost += np.random.normal(0, 2)
         duration += np.random.normal(0, 2)
         quality += np.random.normal(0, 2)
@@ -121,13 +125,12 @@ if st.button("Run Scenario Analysis 🚀"):
                         color_continuous_scale='Viridis', text_auto=True)
         st.plotly_chart(fig, use_container_width=True)
 
-    # Insights
     st.header("🔎 Insights from Scenario Analysis")
     st.markdown("""
-    - **Compare scenarios:** See how changing stakeholder behaviors in each scenario shifts project outcomes.
-    - **Pessimistic scenarios** (more negative behaviors) will show higher cost/duration and lower quality.
-    - **Optimistic scenarios** (more positive behaviors) will show lower cost/duration and higher quality.
-    - **Action:** Use this to stress-test your project plans and identify critical behaviors to focus on.
+    - **Realistic mapping:** Each scenario only involves relevant stakeholders and behaviors per phase.
+    - **Pessimistic scenarios** (more negative traits) will show higher cost/duration and lower quality.
+    - **Optimistic scenarios** (more positive traits) will show lower cost/duration and higher quality.
+    - **Action:** Use this to stress-test your project plans and identify critical traits to focus on for each stakeholder and phase.
     """)
 else:
     st.info("Configure each scenario above, then click 'Run Scenario Analysis 🚀' to compare results.")
