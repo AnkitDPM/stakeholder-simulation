@@ -23,15 +23,12 @@ roles_behaviors = {
 ordinal_levels = ['Low', 'Medium', 'High']
 ordinal_map = {'Low': 1, 'Medium': 2, 'High': 3}
 
-# Define fixed weights for each behavior's impact
 behavior_weights = {
-    # Negative behaviors (higher = worse)
     "Ego": {"cost": 2, "duration": 1, "quality": -2},
     "RiskAversion": {"cost": 1, "duration": 2, "quality": -1},
     "Delays": {"cost": 2, "duration": 3, "quality": -2},
     "ScopeCreep": {"cost": 3, "duration": 2, "quality": -2},
     "Miscommunication": {"cost": 1, "duration": 2, "quality": -2},
-    # Positive behaviors (higher = better)
     "StakeholderEngagement": {"cost": -2, "duration": -1, "quality": 3},
     "Adaptability": {"cost": -1, "duration": -1, "quality": 2},
     "CollaborativePlanning": {"cost": -2, "duration": -2, "quality": 3},
@@ -47,20 +44,21 @@ num_projects = st.sidebar.select_slider(
     "Number of Simulation Runs (multiples of 100)", options=[100,200,300,400,500,600,700,800,900,1000], value=300)
 st.sidebar.markdown("---")
 
-st.header("Configure Stakeholder Behaviors")
+st.header("Configure Stakeholder Behaviors (by Phase)")
 profiles = []
-for role in roles_behaviors:
-    with st.expander(f"{role}", expanded=True):
-        for phase in roles_behaviors[role]["phases"]:
-            st.subheader(f"{role} - {phase} Phase")
-            for behavior in roles_behaviors[role]["behaviors"]:
-                val = st.selectbox(
-                    f"{role} - {phase} - {behavior}",
-                    ordinal_levels,
-                    key=f"{role}-{phase}-{behavior}",
-                    index=1
-                )
-                profiles.append({"Role": role, "Phase": phase, "Behavior": behavior, "Value": val})
+for phase in phases:
+    with st.expander(f"{phase} Phase", expanded=True):
+        for role in roles_behaviors:
+            if phase in roles_behaviors[role]["phases"]:
+                st.subheader(f"{role}")
+                for behavior in roles_behaviors[role]["behaviors"]:
+                    val = st.selectbox(
+                        f"{phase} - {role} - {behavior}",
+                        ordinal_levels,
+                        key=f"{phase}-{role}-{behavior}",
+                        index=1
+                    )
+                    profiles.append({"Phase": phase, "Role": role, "Behavior": behavior, "Value": val})
 
 profiles_df = pd.DataFrame(profiles)
 
@@ -71,18 +69,15 @@ def simulate_projects(num_projects, profiles_df):
         cost = 50
         duration = 50
         quality = 50
-        for _, row in profiles_df.iterrows():
-            if row["Phase"] == phase:
-                level = ordinal_map[row["Value"]]
-                w = behavior_weights[row["Behavior"]]
-                cost += w["cost"] * (level - 2)  # Medium is baseline
-                duration += w["duration"] * (level - 2)
-                quality += w["quality"] * (level - 2)
-        # Add a little noise
+        for _, row in profiles_df[profiles_df["Phase"] == phase].iterrows():
+            level = ordinal_map[row["Value"]]
+            w = behavior_weights[row["Behavior"]]
+            cost += w["cost"] * (level - 2)
+            duration += w["duration"] * (level - 2)
+            quality += w["quality"] * (level - 2)
         cost += np.random.normal(0, 2)
         duration += np.random.normal(0, 2)
         quality += np.random.normal(0, 2)
-        # Categorize
         cost_cat = 'High' if cost > 55 else 'Medium' if cost > 45 else 'Low'
         duration_cat = 'High' if duration > 55 else 'Medium' if duration > 45 else 'Low'
         quality_cat = 'High' if quality > 55 else 'Medium' if quality > 45 else 'Low'
@@ -116,7 +111,6 @@ if st.button("Run Simulation 🚀"):
     with st.expander("See Raw Simulation Data"):
         st.dataframe(projects_df)
 
-    # Insights
     st.header("🔎 Insights from Simulation")
     st.markdown(f"""
     - **High cost or duration**: If you observe many projects in the 'High' category, review which behaviors are set to 'High' for negative factors (e.g., Ego, Delays, ScopeCreep). Lowering these will improve outcomes.
