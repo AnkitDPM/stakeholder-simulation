@@ -47,6 +47,46 @@ behavior_weights = {
     "ConflictResolution": {"cost": -1, "duration": -1, "quality": 2},
 }
 
+import streamlit as st
+from graphviz import Digraph
+
+dot = Digraph("StakeholderPhases", format="png")
+dot.attr(rankdir="LR")
+dot.attr('node', shape='box', style='rounded')
+
+phases = ['Initiation', 'Planning', 'Execution', 'Closure']
+roles_behaviors = {
+    "Client": {
+        "phases": ['Initiation', 'Planning', 'Closure'],
+        "behaviors": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"]
+    },
+    "Project Manager": {
+        "phases": ['Initiation', 'Planning', 'Execution', 'Closure'],
+        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"]
+    },
+    "Project Team": {
+        "phases": ['Planning', 'Execution', 'Closure'],
+        "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
+    }
+}
+phase_short = {"Initiation":"Init", "Planning":"Plan", "Execution":"Exec", "Closure":"Clos"}
+
+for phase in phases:
+    dot.node(phase)
+    for role in roles_behaviors:
+        if phase in roles_behaviors[role]["phases"]:
+            dot.node(role)
+            dot.edge(phase, role)
+            for behavior in roles_behaviors[role]["behaviors"]:
+                # Only add behaviors relevant for this phase
+                if phase in roles_behaviors[role]["phases"]:
+                    beh_node = f"{behavior} ({phase_short[phase]})"
+                    dot.node(beh_node)
+                    dot.edge(role, beh_node)
+
+st.graphviz_chart(dot)
+
+
 st.title("🌈 Stakeholder Simulation (by Trait)")
 
 st.sidebar.header("Simulation Settings")
