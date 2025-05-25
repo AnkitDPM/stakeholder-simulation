@@ -2,46 +2,21 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import graphviz
 
 st.set_page_config(page_title="Scenario Analysis - Stakeholder Simulation", layout="wide")
 
-phase_structure = {
-    "Initiation": {
-        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
-        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"]
-    },
-    "Planning": {
-        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
-        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
-        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
-    },
-    "Execution": {
-        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
-        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
-    },
-    "Closure": {
-        "Client": ["Ego", "RiskAversion", "StakeholderEngagement", "Delays", "ScopeCreep"],
-        "Project Manager": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "ProactiveComms", "ConflictResolution", "Miscommunication"],
-        "Project Team": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
-    }
-}
-ordinal_levels = ['Low', 'Medium', 'High']
-ordinal_map = {'Low': 1, 'Medium': 2, 'High': 3}
-behavior_weights = {
-    "Ego": {"cost": 2, "duration": 1, "quality": -2},
-    "RiskAversion": {"cost": 1, "duration": 2, "quality": -1},
-    "Delays": {"cost": 2, "duration": 3, "quality": -2},
-    "ScopeCreep": {"cost": 3, "duration": 2, "quality": -2},
-    "Miscommunication": {"cost": 1, "duration": 2, "quality": -2},
-    "StakeholderEngagement": {"cost": -2, "duration": -1, "quality": 3},
-    "Adaptability": {"cost": -1, "duration": -1, "quality": 2},
-    "CollaborativePlanning": {"cost": -2, "duration": -2, "quality": 3},
-    "ConstructiveFeedback": {"cost": -1, "duration": -1, "quality": 2},
-    "ProactiveComms": {"cost": -1, "duration": -1, "quality": 2},
-    "ConflictResolution": {"cost": -1, "duration": -1, "quality": 2},
-}
+# phase_structure, ordinal_levels, ordinal_map, behavior_weights, rationale_data, make_tree as in stakeholder_simulation.py above
 
-st.title("📊 Scenario Analysis - Stakeholder Simulation (Realistic)")
+# (Copy the same phase_structure, rationale_data, and make_tree function from above)
+
+# --- Rationale Table ---
+st.markdown("### Rationale for Selection of Behaviors (with References)")
+st.table(pd.DataFrame(rationale_data, columns=["Phase", "Stakeholder", "Behaviors", "Rationale/Reference"]))
+
+# --- Graphviz Tree ---
+st.subheader("📊 Project Structure Tree")
+st.graphviz_chart(make_tree())
 
 st.sidebar.header("Simulation Settings")
 num_projects = st.sidebar.select_slider(
@@ -127,10 +102,9 @@ if st.button("Run Scenario Analysis 🚀"):
 
     st.header("🔎 Insights from Scenario Analysis")
     st.markdown("""
-    - **Realistic mapping:** Each scenario only involves relevant stakeholders and behaviors per phase.
+    - **Realistic mapping:** Each scenario only involves the top impactful traits per stakeholder/phase.
     - **Pessimistic scenarios** (more negative traits) will show higher cost/duration and lower quality.
     - **Optimistic scenarios** (more positive traits) will show lower cost/duration and higher quality.
-    - **Action:** Use this to stress-test your project plans and identify critical traits to focus on for each stakeholder and phase.
     """)
 else:
     st.info("Configure each scenario above, then click 'Run Scenario Analysis 🚀' to compare results.")
