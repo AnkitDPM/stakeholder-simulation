@@ -23,6 +23,20 @@ roles_behaviors = {
 ordinal_levels = ['Low', 'Medium', 'High']
 ordinal_map = {'Low': 1, 'Medium': 2, 'High': 3}
 
+behavior_weights = {
+    "Ego": {"cost": 2, "duration": 1, "quality": -2},
+    "RiskAversion": {"cost": 1, "duration": 2, "quality": -1},
+    "Delays": {"cost": 2, "duration": 3, "quality": -2},
+    "ScopeCreep": {"cost": 3, "duration": 2, "quality": -2},
+    "Miscommunication": {"cost": 1, "duration": 2, "quality": -2},
+    "StakeholderEngagement": {"cost": -2, "duration": -1, "quality": 3},
+    "Adaptability": {"cost": -1, "duration": -1, "quality": 2},
+    "CollaborativePlanning": {"cost": -2, "duration": -2, "quality": 3},
+    "ConstructiveFeedback": {"cost": -1, "duration": -1, "quality": 2},
+    "ProactiveComms": {"cost": -1, "duration": -1, "quality": 2},
+    "ConflictResolution": {"cost": -1, "duration": -1, "quality": 2},
+}
+
 st.title("📊 Scenario Analysis - Stakeholder Simulation")
 
 st.sidebar.header("Simulation Settings")
@@ -51,26 +65,29 @@ for scenario in scenario_list:
                     profiles.append({"Role": role, "Phase": phase, "Behavior": behavior, "Value": val})
     scenarios[scenario] = pd.DataFrame(profiles)
 
-def run_simulation(num_projects, profiles_df):
+def simulate_projects(num_projects, profiles_df):
     projects = []
     for _ in range(num_projects):
         phase = np.random.choice(phases)
-        role_means = {}
-        for role in roles_behaviors:
-            if phase in roles_behaviors[role]['phases']:
-                subset = profiles_df[(profiles_df.Role == role) & (profiles_df.Phase == phase)]
-                for behavior in roles_behaviors[role]['behaviors']:
-                    v = subset[subset.Behavior == behavior]['Value'].values[0]
-                    role_means[f"{role}_{behavior}"] = ordinal_map[v]
-        cost_score = sum(v * np.random.uniform(-1, 1) for v in role_means.values())
-        duration_score = sum(v * np.random.uniform(-1, 1) for v in role_means.values())
-        quality_score = 10 - abs(cost_score) - abs(duration_score) + np.random.normal(0, 1)
-        cost_cat = 'High' if cost_score > 2 else 'Medium' if cost_score > 0 else 'Low'
-        duration_cat = 'High' if duration_score > 2 else 'Medium' if duration_score > 0 else 'Low'
-        quality_cat = 'High' if quality_score > 7 else 'Medium' if quality_score > 4 else 'Low'
+        cost = 50
+        duration = 50
+        quality = 50
+        for _, row in profiles_df.iterrows():
+            if row["Phase"] == phase:
+                level = ordinal_map[row["Value"]]
+                w = behavior_weights[row["Behavior"]]
+                cost += w["cost"] * (level - 2)
+                duration += w["duration"] * (level - 2)
+                quality += w["quality"] * (level - 2)
+        cost += np.random.normal(0, 2)
+        duration += np.random.normal(0, 2)
+        quality += np.random.normal(0, 2)
+        cost_cat = 'High' if cost > 55 else 'Medium' if cost > 45 else 'Low'
+        duration_cat = 'High' if duration > 55 else 'Medium' if duration > 45 else 'Low'
+        quality_cat = 'High' if quality > 55 else 'Medium' if quality > 45 else 'Low'
         projects.append({
             'Phase': phase,
-            'CostScore': cost_score, 'DurationScore': duration_score, 'QualityScore': quality_score,
+            'Cost': cost, 'Duration': duration, 'Quality': quality,
             'CostCat': cost_cat, 'DurationCat': duration_cat, 'QualityCat': quality_cat
         })
     return pd.DataFrame(projects)
@@ -78,10 +95,9 @@ def run_simulation(num_projects, profiles_df):
 if st.button("Run Scenario Analysis 🚀"):
     results = {}
     for scenario, profiles_df in scenarios.items():
-        results[scenario] = run_simulation(num_projects, profiles_df)
+        results[scenario] = simulate_projects(num_projects, profiles_df)
     st.success("Scenario analysis complete! See results below:")
 
-    # KPI plots comparison
     for kpi in ['CostCat','DurationCat','QualityCat']:
         st.subheader(f"{kpi.replace('Cat','')} Distribution by Scenario")
         fig = px.histogram(
@@ -96,7 +112,6 @@ if st.button("Run Scenario Analysis 🚀"):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Heatmap for Quality by Scenario
     st.subheader("Heatmap of Quality Category by Phase (per Scenario)")
     for scenario, df in results.items():
         st.markdown(f"**{scenario}**")
@@ -105,5 +120,14 @@ if st.button("Run Scenario Analysis 🚀"):
                         x=quality_pivot.columns, y=quality_pivot.index,
                         color_continuous_scale='Viridis', text_auto=True)
         st.plotly_chart(fig, use_container_width=True)
+
+    # Insights
+    st.header("🔎 Insights from Scenario Analysis")
+    st.markdown("""
+    - **Compare scenarios:** See how changing stakeholder behaviors in each scenario shifts project outcomes.
+    - **Pessimistic scenarios** (more negative behaviors) will show higher cost/duration and lower quality.
+    - **Optimistic scenarios** (more positive behaviors) will show lower cost/duration and higher quality.
+    - **Action:** Use this to stress-test your project plans and identify critical behaviors to focus on.
+    """)
 else:
     st.info("Configure each scenario above, then click 'Run Scenario Analysis 🚀' to compare results.")
