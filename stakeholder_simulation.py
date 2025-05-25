@@ -50,7 +50,7 @@ behavior_weights = {
 import streamlit as st
 import graphviz
 
-# Color palettes for clarity
+# Color palettes
 phase_colors = {
     "Initiation": "#AED6F1",
     "Planning": "#A9DFBF",
@@ -83,31 +83,30 @@ roles_behaviors = {
         "behaviors": ["Adaptability", "CollaborativePlanning", "ConstructiveFeedback", "Delays", "Miscommunication"]
     }
 }
-phase_short = {"Initiation":"Init", "Planning":"Plan", "Execution":"Exec", "Closure":"Clos"}
 
+# Create the graph
 dot = graphviz.Digraph("StakeholderPhases", format="png")
-dot.attr(rankdir="LR", size="8,4")
+dot.attr(rankdir="LR", size="8,3")
 dot.attr('node', shape='box', style='rounded,filled', fontsize="10")
 
 # Add phase nodes
 for phase in phases:
-    dot.node(phase, phase, fillcolor=phase_colors[phase], fontcolor="#154360")
+    dot.node(f"phase_{phase}", phase, fillcolor=phase_colors[phase], fontcolor="#154360")
 
-# Add role nodes per phase and connect
+# Add stakeholder and behavior nodes per phase
 for phase in phases:
     for role in roles_behaviors:
         if phase in roles_behaviors[role]["phases"]:
-            role_id = f"{role}_{phase}"
-            dot.node(role_id, role, fillcolor=role_colors[role], fontcolor="white")
-            dot.edge(phase, role_id, color=role_colors[role])
-            # Add behavior nodes for this role/phase
+            role_id = f"role_{role}_{phase}"
+            dot.node(role_id, role, fillcolor=role_colors[role], fontcolor="white", fontsize="10")
+            dot.edge(f"phase_{phase}", role_id, color=role_colors[role])
             for behavior in roles_behaviors[role]["behaviors"]:
-                beh_id = f"{behavior}_{role}_{phase}"
-                dot.node(beh_id, behavior, fillcolor=behavior_colors.get(behavior, "#ABB2B9"), fontcolor="white", fontsize="9")
+                beh_id = f"beh_{behavior}_{role}_{phase}"
+                dot.node(beh_id, behavior, fillcolor=behavior_colors.get(behavior, "#ABB2B9"), fontcolor="white", fontsize="9", width="0.1")
                 dot.edge(role_id, beh_id, color=behavior_colors.get(behavior, "#ABB2B9"))
 
-st.subheader("📊 Compact, Colorful Phase–Stakeholder–Behavior Tree")
-st.graphviz_chart(dot)
+st.subheader("📊 Horizontal, Compact, Colorful Phase–Stakeholder–Behavior Tree")
+st.graphviz_chart(dot, use_container_width=True)
 
 
 st.title("🌈 Stakeholder Simulation (by Trait)")
